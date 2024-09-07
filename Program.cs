@@ -1,93 +1,78 @@
 using class_work.middleware;
-using class_work.Context;
-using class_work.Models;
 
-using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddDbContext<DataBaseContext>(options =>
-{
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
+builder.Services.AddTransient<ITimeService, TimeService>();
+builder.Services.AddSingleton<ICounter, CounterService>();
+builder.Services.AddScoped<IRandomString, RandomString>();
 
 var app = builder.Build();
 
-var dbContext = app.Services.GetService<DataBaseContext>();
+app.UseMiddleware<TimeMessageMiddleware>();
+app.UseMiddleware<CounterMiddleware>();
+app.UseMiddleware<RandomStringmiddleware>();
 
-//app.MapGet("/", () => "Hello World!");
+app.MapGet("/time-get", async (context) => {
 
-//app.UseMiddleware<ErrorHandlerMiddleware>();
-app.UseMiddleware<ToHTMLMiddleware>();
-
-app.UseMiddleware<NumberDeterminantMiddleware>();
-//app.UseMiddleware<SentanceLengthMiddleware>();
-//app.UseMiddleware<AuthMiddleware>();
-//app.UseMiddleware<RoutingMiddleware>();
-
-//app.Environment.EnvironmentName = Environment.Ololo.ToString();
-
-//if (app.Environment.IsDevelopment())
-//{
-//    app.Run(async context =>
-//    {
-//        await context.Response.WriteAsync("Test");
-//    });
-//}else if (app.Environment.IsEnvironment(Environment.Ololo.ToString()))
-//{
-//    app.Run(async context =>
-//    {
-//        await context.Response.WriteAsync("Ololo");
-//    });
-//}
-//else
-//{
-//    app.Run(async context =>
-//    {
-//        await context.Response.WriteAsync("Prod");
-//    });
-//}
-
-app.MapGet("/api/products", async (context) =>
-{
-    var products = await dbContext.Products.ToListAsync();
-    await context.Response.WriteAsJsonAsync(products);
-
+    var timeService = context.RequestServices.GetRequiredService<ITimeService>();
+    await context.Response.WriteAsync($"<h1>Time: {timeService.GetTime()}</h1>");
 });
 
-app.MapPost("/api/products", async (context) =>
-{
-    var product = await context.Request.ReadFromJsonAsync<Product>();
-    await dbContext.Products.AddAsync(product);
-    await dbContext.SaveChangesAsync();
-    await context.Response.WriteAsJsonAsync(product);
+app.MapGet("/counter-get", async (context) => {
+
+    var counter = context.RequestServices.GetRequiredService<ICounter>();
+    await context.Response.WriteAsync($"<h1>Counter: {counter.Value}</h1>");
 });
 
-app.MapPut("/api/products/{id}", async (context) =>
-{
-    var id = context.Request.RouteValues["id"] as string;
-    var product = await context.Request.ReadFromJsonAsync<Product>();
-    product.Id = Guid.Parse(id);
-    dbContext.Products.Update(product);
-    await dbContext.SaveChangesAsync();
-    await context.Response.WriteAsJsonAsync(product);
+app.MapGet("/random-get", async (context) => {
+
+    var randomString = context.RequestServices.GetRequiredService<IRandomString>();
+    await context.Response.WriteAsync($"<h1>Random: {randomString.GetRandomString()}</h1>");
 });
 
-app.MapDelete("/api/products/{id}", async (context) =>
-{
-    var id = context.Request.RouteValues["id"] as string;
-    var product = await dbContext.Products.FindAsync(Guid.Parse(id));
-    dbContext.Products.Remove(product);
-    await dbContext.SaveChangesAsync();
-    await context.Response.WriteAsJsonAsync(product);
-
-});
 
 app.Run();
 
-public enum Environment
+public interface ITimeService
 {
-    Development,
-    Production,
-    Ololo
+    string GetTime();
+}
+
+public class TimeService : ITimeService
+{
+
+    private readonly DateTime _time = DateTime.Now;
+
+    public string GetTime()
+    {
+        return _time.ToString("dd.MM hh:mm:ss");
+    }
+}
+
+//-------------
+public interface ICounter
+{
+    public int Value { get;  }
+}
+public class CounterService : ICounter
+{
+    private int _value = 0;
+    public int Value { get { 
+            _value++;
+            return _value;
+        }
+    }
+}
+//------------
+public interface IRandomString
+{
+    string GetRandomString();
+}
+public class RandomString : IRandomString
+{
+    public string GetRandomString()
+    {
+        return Guid.NewGuid().ToString();
+    }
 }
