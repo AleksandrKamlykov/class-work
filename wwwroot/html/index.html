@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Products</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Product List</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Price</th>
+            </tr>
+        </thead>
+        <tbody id="productTableBody">
+            <!-- Products will be inserted here by JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+    // Function to fetch and display products
+        async function fetchAndDisplayProducts() {
+            try {
+                const response = await fetch('/api/products');
+                const products = await response.json();
+                const tableBody = document.getElementById('productTableBody');
+                products.forEach(product => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                           <td>${product.id}</td>
+                           <td>${product.name}</td>
+                           <td>${product.price}</td>
+                       `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Error fetching products:', error);
+            }
+        }
+
+        // Call the function to fetch and display products when the page loads
+        window.onload = fetchAndDisplayProducts;
+    </script>
+</body>
+</html>
